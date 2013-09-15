@@ -17,61 +17,30 @@ import de.flaviait.tasks.vendingmachine.domain.DrinkAndChange;
 import de.flaviait.tasks.vendingmachine.domain.DrinkSlot;
 import de.flaviait.tasks.vendingmachine.domain.PermissibleCoins;
 import de.flaviait.tasks.vendingmachine.exceptions.DrinkUnavailableException;
-import de.flaviait.tasks.vendingmachine.exceptions.InsufficientChangeException;
-import de.flaviait.tasks.vendingmachine.service.VendingMachineService;
+import de.flaviait.tasks.vendingmachine.exceptions.ChangeUnvailableException;
+import de.flaviait.tasks.vendingmachine.exceptions.InsufficientCoinsException;
+import de.flaviait.tasks.vendingmachine.service.VendingMachine;
 
 /**
  * 
  * @author <a href="mailto:acsama@gmail.com.de">Achiri Sama Teyha</a>
  * 
  */
-public class VendingMachineServiceImpl implements VendingMachineService {
+public class VendingMachineImpl implements VendingMachine {
 
 	// Logger
 	private static final Log LOGGER = LogFactory
-			.getLog(VendingMachineServiceImpl.class);
+			.getLog(VendingMachineImpl.class);
 
-	public static Map<Long, DrinkSlot> DRINK_STORE;
-	public static Map<PermissibleCoins, CoinSlot> COIN_STORE;
+	public Map<Long, DrinkSlot> drinkStore;
+	public Map<PermissibleCoins, CoinSlot> coinStore;
 
-	public static int TOTAL_COIN_COUNT = 0;
-
-	static {
-		DrinkSlot coke = new DrinkSlot(101L, "Coke", 10, 10,
-				BigDecimal.valueOf(120));
-
-		DrinkSlot dietCoke = new DrinkSlot(201L, "Diet Coke", 10, 10,
-				BigDecimal.valueOf(160));
-
-		DrinkSlot fanta = new DrinkSlot(301L, "Fanta", 10, 10,
-				BigDecimal.valueOf(70));
-
-		DrinkSlot sprite = new DrinkSlot(401L, "Sprite", 10, 10,
-				BigDecimal.valueOf(100));
-
-		DrinkSlot pepsiCola = new DrinkSlot(501L, "Pepsi Cola", 10, 10,
-				BigDecimal.valueOf(120));
-
-		DRINK_STORE = new HashMap<Long, DrinkSlot>();
-		DRINK_STORE.put(101L, coke);
-		DRINK_STORE.put(201L, dietCoke);
-		DRINK_STORE.put(301L, fanta);
-		DRINK_STORE.put(401L, sprite);
-		DRINK_STORE.put(501L, pepsiCola);
-
-		CoinSlot cent10 = new CoinSlot(PermissibleCoins.CENT10, 100);
-		CoinSlot cent20 = new CoinSlot(PermissibleCoins.CENT20, 100);
-		CoinSlot cent50 = new CoinSlot(PermissibleCoins.CENT50, 100);
-		CoinSlot cent100 = new CoinSlot(PermissibleCoins.ONE_EURO, 100);
-		CoinSlot cent200 = new CoinSlot(PermissibleCoins.TWO_EUROS, 10);
-
-		COIN_STORE = new HashMap<PermissibleCoins, CoinSlot>();
-		COIN_STORE.put(cent10.getDenomination(), cent10);
-		COIN_STORE.put(cent20.getDenomination(), cent20);
-		COIN_STORE.put(cent50.getDenomination(), cent50);
-		COIN_STORE.put(cent100.getDenomination(), cent100);
-		COIN_STORE.put(cent200.getDenomination(), cent200);
-
+	/**
+	 * default constructor, initializes an in memory store of drinks and coins
+	 */
+	public VendingMachineImpl() {
+		super();
+		initStore();
 	}
 
 	/*
@@ -83,7 +52,8 @@ public class VendingMachineServiceImpl implements VendingMachineService {
 	 * de.flaviait.tasks.vendingmachine.domain.Coin[])
 	 */
 	public DrinkAndChange buy(Drink selectedDrink, Coin... inputCoin)
-			throws InsufficientChangeException, DrinkUnavailableException {
+			throws ChangeUnvailableException, DrinkUnavailableException,
+			InsufficientCoinsException {
 
 		BigDecimal paidPrice = BigDecimal.ZERO;
 
@@ -91,11 +61,15 @@ public class VendingMachineServiceImpl implements VendingMachineService {
 
 		Coin[] change = null;
 
-		BigDecimal costPrice = DRINK_STORE.get(selectedDrink.getSlotNumber())
+		BigDecimal costPrice = drinkStore.get(selectedDrink.getSlotNumber())
 				.getPrice();
 
 		if (paidPrice.compareTo(costPrice) < 0) {
-			// throw price less that costprice exception
+			String message = String
+					.format("sorry but the drink you have choosen cost %d cents and not %d cents",
+							costPrice.intValue(), paidPrice.intValue());
+			LOGGER.info(message);
+			throw new InsufficientCoinsException(message);
 		} else if (paidPrice.compareTo(costPrice) > 0) {
 			change = getChange(costPrice, paidPrice);
 		}
@@ -106,23 +80,6 @@ public class VendingMachineServiceImpl implements VendingMachineService {
 
 	}
 
-	private Drink dispenseDrink(Drink selectedDrink)
-			throws DrinkUnavailableException {
-
-		DrinkSlot selectedDrinkSlot = DRINK_STORE.get(selectedDrink
-				.getSlotNumber());
-
-		if (selectedDrinkSlot != null && selectedDrinkSlot.getCount() > 0) {
-
-			selectedDrinkSlot.reduceCount();
-
-			return new Drink(selectedDrinkSlot.getSlotNumber(),
-					selectedDrinkSlot.getName());
-		}
-
-		throw new DrinkUnavailableException();
-	}
-
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -130,7 +87,7 @@ public class VendingMachineServiceImpl implements VendingMachineService {
 	 * replenishDrinks(de.flaviait.tasks.vendingmachine.domain.Drink)
 	 */
 	public void replenishDrinks(Drink drink) {
-		DRINK_STORE.get(drink.getSlotNumber()).increaseCount();
+		drinkStore.get(drink.getSlotNumber()).increaseCount();
 	}
 
 	/*
@@ -140,7 +97,7 @@ public class VendingMachineServiceImpl implements VendingMachineService {
 	 * replenishChange(de.flaviait.tasks.vendingmachine.domain.Coin)
 	 */
 	public void replenishChange(Coin change) {
-		COIN_STORE.get(change.getDenomination()).increaseCount();
+		coinStore.get(change.getDenomination()).increaseCount();
 
 	}
 
@@ -151,7 +108,9 @@ public class VendingMachineServiceImpl implements VendingMachineService {
 	 * emptyDrinkStore()
 	 */
 	public void emptyDrinkStore() {
-		DRINK_STORE.clear();
+		for (Map.Entry<Long, DrinkSlot> drinkSlot : drinkStore.entrySet()) {
+			drinkSlot.getValue().setCount(0);
+		}
 
 	}
 
@@ -162,7 +121,48 @@ public class VendingMachineServiceImpl implements VendingMachineService {
 	 * emptyChangeStore()
 	 */
 	public void emptyChangeStore() {
-		COIN_STORE.clear();
+
+		for (Map.Entry<PermissibleCoins, CoinSlot> coinSlot : coinStore
+				.entrySet()) {
+			coinSlot.getValue().setCount(0);
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see de.flaviait.tasks.vendingmachine.service.VendingMachineService#
+	 * getCoinInventory(de.flaviait.tasks.vendingmachine.domain.Drink)
+	 */
+	public int getCoinInventory(Coin coin) {
+		return coinStore.get(coin.getDenomination()).getCount();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see de.flaviait.tasks.vendingmachine.service.VendingMachineService#
+	 * getDrinkInventory(de.flaviait.tasks.vendingmachine.domain.Coin)
+	 */
+	public int getDrinkInventory(Drink drink) {
+		return drinkStore.get(drink.getSlotNumber()).getCount();
+	}
+
+	private Drink dispenseDrink(Drink selectedDrink)
+			throws DrinkUnavailableException {
+
+		DrinkSlot selectedDrinkSlot = drinkStore.get(selectedDrink
+				.getSlotNumber());
+
+		if (selectedDrinkSlot != null && selectedDrinkSlot.getCount() > 0) {
+
+			selectedDrinkSlot.decreaseCount();
+
+			return new Drink(selectedDrinkSlot.getSlotNumber(),
+					selectedDrinkSlot.getName());
+		}
+
+		throw new DrinkUnavailableException();
 	}
 
 	private BigDecimal getPaidPrice(Coin... receivedCoins) {
@@ -197,7 +197,7 @@ public class VendingMachineServiceImpl implements VendingMachineService {
 	}
 
 	private Coin[] getChange(BigDecimal costPrice, BigDecimal paidPrice)
-			throws InsufficientChangeException {
+			throws ChangeUnvailableException {
 
 		BigDecimal balance = paidPrice.subtract(costPrice);
 
@@ -282,7 +282,7 @@ public class VendingMachineServiceImpl implements VendingMachineService {
 				balance = balance.subtract(PermissibleCoins.CENT10.getValue()
 						.multiply(BigDecimal.valueOf(tenCentChangeCount)));
 			} else {
-				throw new InsufficientChangeException(
+				throw new ChangeUnvailableException(
 						"insufficient coins for change");
 			}
 		}
@@ -293,13 +293,13 @@ public class VendingMachineServiceImpl implements VendingMachineService {
 	private boolean isChangeAvailable(PermissibleCoins permissibleCoins,
 			List<Coin> changeCoins, int coinCount) {
 
-		CoinSlot neededCoin = COIN_STORE.get(permissibleCoins);
+		CoinSlot neededCoin = coinStore.get(permissibleCoins);
 
 		if (neededCoin.getCount() >= coinCount) {
 			for (int i = 0; i < coinCount; i++) {
 				Coin changeCoin = new Coin(permissibleCoins);
 				changeCoins.add(changeCoin);
-				neededCoin.reduceCount();
+				neededCoin.decreaseCount();
 			}
 			return true;
 		}
@@ -308,4 +308,43 @@ public class VendingMachineServiceImpl implements VendingMachineService {
 				+ "s out of stock; please replenish");
 		return false;
 	}
+
+	private void initStore() {
+		DrinkSlot coke = new DrinkSlot(101L, "Coke", 10,
+				BigDecimal.valueOf(120));
+
+		DrinkSlot dietCoke = new DrinkSlot(201L, "Diet Coke", 10,
+				BigDecimal.valueOf(160));
+
+		DrinkSlot fanta = new DrinkSlot(301L, "Fanta", 10,
+				BigDecimal.valueOf(70));
+
+		DrinkSlot sprite = new DrinkSlot(401L, "Sprite", 10,
+				BigDecimal.valueOf(100));
+
+		DrinkSlot pepsiCola = new DrinkSlot(501L, "Pepsi Cola", 10,
+				BigDecimal.valueOf(120));
+
+		drinkStore = new HashMap<Long, DrinkSlot>();
+		drinkStore.put(101L, coke);
+		drinkStore.put(201L, dietCoke);
+		drinkStore.put(301L, fanta);
+		drinkStore.put(401L, sprite);
+		drinkStore.put(501L, pepsiCola);
+
+		CoinSlot cent10 = new CoinSlot(PermissibleCoins.CENT10, 100);
+		CoinSlot cent20 = new CoinSlot(PermissibleCoins.CENT20, 100);
+		CoinSlot cent50 = new CoinSlot(PermissibleCoins.CENT50, 100);
+		CoinSlot cent100 = new CoinSlot(PermissibleCoins.ONE_EURO, 100);
+		CoinSlot cent200 = new CoinSlot(PermissibleCoins.TWO_EUROS, 10);
+
+		coinStore = new HashMap<PermissibleCoins, CoinSlot>();
+		coinStore.put(cent10.getDenomination(), cent10);
+		coinStore.put(cent20.getDenomination(), cent20);
+		coinStore.put(cent50.getDenomination(), cent50);
+		coinStore.put(cent100.getDenomination(), cent100);
+		coinStore.put(cent200.getDenomination(), cent200);
+
+	}
+
 }

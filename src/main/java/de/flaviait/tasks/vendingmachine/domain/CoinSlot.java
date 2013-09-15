@@ -10,7 +10,6 @@ public class CoinSlot {
 		this.denomination = denomination;
 		this.count = count;
 	}
-	
 
 	public CoinSlot(PermissibleCoins denomination) {
 		super();
@@ -33,14 +32,19 @@ public class CoinSlot {
 		this.count = count;
 	}
 
+	/**
+	 * increase count by one
+	 */
 	public void increaseCount() {
 		this.count++;
 	}
 
-	public void reduceCount() {
+	/**
+	 * decrease count by one
+	 */
+	public void decreaseCount() {
 		this.count--;
 	}
-
 
 	@Override
 	public int hashCode() {
@@ -51,7 +55,6 @@ public class CoinSlot {
 				+ ((denomination == null) ? 0 : denomination.hashCode());
 		return result;
 	}
-
 
 	@Override
 	public boolean equals(Object obj) {
@@ -69,13 +72,10 @@ public class CoinSlot {
 		return true;
 	}
 
-
 	@Override
 	public String toString() {
 		return "CoinSlot [denomination=" + denomination + ", count=" + count
 				+ "]";
 	}
-
-	
 
 }

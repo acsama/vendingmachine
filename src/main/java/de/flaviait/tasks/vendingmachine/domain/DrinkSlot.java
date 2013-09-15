@@ -9,8 +9,7 @@ public class DrinkSlot {
 	int count;
 	BigDecimal price;
 
-	public DrinkSlot(Long slotNumber, String name, int count,
-			int currentlyAvailable, BigDecimal price) {
+	public DrinkSlot(Long slotNumber, String name, int count, BigDecimal price) {
 		super();
 		this.slotNumber = slotNumber;
 		this.name = name;
@@ -53,7 +52,7 @@ public class DrinkSlot {
 	/**
 	 * reduce count by one
 	 */
-	public void reduceCount() {
+	public void decreaseCount() {
 		count--;
 	}
 
@@ -61,7 +60,7 @@ public class DrinkSlot {
 	 * increase count be one
 	 */
 	public void increaseCount() {
-		count--;
+		count++;
 	}
 
 	@Override
