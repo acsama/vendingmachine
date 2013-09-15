@@ -65,16 +65,20 @@ public class VendingMachineImpl implements VendingMachine {
 				.getPrice();
 
 		if (paidPrice.compareTo(costPrice) < 0) {
+
 			String message = String
 					.format("sorry but the drink you have choosen cost %d cents and not %d cents",
 							costPrice.intValue(), paidPrice.intValue());
+
 			LOGGER.info(message);
+
 			throw new InsufficientCoinsException(message);
+
 		} else if (paidPrice.compareTo(costPrice) > 0) {
-			change = getChange(costPrice, paidPrice);
+			change = calculateChange(costPrice, paidPrice);
 		}
 
-		selectedDrink = dispenseDrink(selectedDrink);
+		selectedDrink = dispenseDrink(selectedDrink, inputCoin);
 
 		return new DrinkAndChange(selectedDrink, change);
 
@@ -148,13 +152,37 @@ public class VendingMachineImpl implements VendingMachine {
 		return drinkStore.get(drink.getSlotNumber()).getCount();
 	}
 
-	private Drink dispenseDrink(Drink selectedDrink)
+	private Drink dispenseDrink(Drink selectedDrink, Coin... receivedCoins)
 			throws DrinkUnavailableException {
 
 		DrinkSlot selectedDrinkSlot = drinkStore.get(selectedDrink
 				.getSlotNumber());
 
 		if (selectedDrinkSlot != null && selectedDrinkSlot.getCount() > 0) {
+
+			for (Coin coin : receivedCoins) {
+
+				switch (coin.getDenomination()) {
+				case CENT10:
+					coinStore.get(PermissibleCoins.CENT10).increaseCount();
+					break;
+				case CENT20:
+					coinStore.get(PermissibleCoins.CENT20).increaseCount();
+					break;
+				case CENT50:
+					coinStore.get(PermissibleCoins.CENT50).increaseCount();
+					break;
+				case ONE_EURO:
+					coinStore.get(PermissibleCoins.ONE_EURO).increaseCount();
+					break;
+				case TWO_EUROS:
+					coinStore.get(PermissibleCoins.TWO_EUROS).increaseCount();
+					break;
+
+				default:
+					break;
+				}
+			}
 
 			selectedDrinkSlot.decreaseCount();
 
@@ -196,7 +224,7 @@ public class VendingMachineImpl implements VendingMachine {
 		return paidPrice;
 	}
 
-	private Coin[] getChange(BigDecimal costPrice, BigDecimal paidPrice)
+	private Coin[] calculateChange(BigDecimal costPrice, BigDecimal paidPrice)
 			throws ChangeUnvailableException {
 
 		BigDecimal balance = paidPrice.subtract(costPrice);

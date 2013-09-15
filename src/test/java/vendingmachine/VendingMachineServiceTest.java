@@ -33,14 +33,26 @@ public class VendingMachineServiceTest {
 	@Test
 	public void testBuy() throws DrinkUnavailableException,
 			ChangeUnvailableException, InsufficientCoinsException {
+
 		Drink selelctedDrink = new Drink(101L);
-		Coin[] paidInCoin = { new Coin(PermissibleCoins.CENT50),
-				new Coin(PermissibleCoins.CENT50),
+
+		Coin[] paidInCoin = { new Coin(PermissibleCoins.ONE_EURO),
 				new Coin(PermissibleCoins.CENT50) };
+
+		int oneEuroCountExpectedAfterBuy = vendingMachine
+				.getCoinInventory(new Coin(PermissibleCoins.ONE_EURO)) + 1;
+
+		int cent50CountExpectedAfterBuy = vendingMachine
+				.getCoinInventory(new Coin(PermissibleCoins.CENT50)) + 1;
+
+		int cokeDrinkCountExpectedAfterBuy = vendingMachine
+				.getDrinkInventory(selelctedDrink) - 1;
+
 		DrinkAndChange drinkAndChange = vendingMachine.buy(selelctedDrink,
 				paidInCoin);
 
 		Drink boughtDrink = drinkAndChange.getDrink();
+
 		Coin[] change = drinkAndChange.getChange();
 
 		Assert.assertTrue("coke".equalsIgnoreCase(boughtDrink.getName()));
@@ -53,6 +65,27 @@ public class VendingMachineServiceTest {
 		}
 
 		Assert.assertTrue(BigDecimal.valueOf(30.0).equals(changeValue));
+
+		int oneEuroCountAfterBuy = vendingMachine.getCoinInventory(new Coin(
+				PermissibleCoins.ONE_EURO));
+
+		int cent50CountAfterBuy = vendingMachine.getCoinInventory(new Coin(
+				PermissibleCoins.CENT50));
+
+		int cokeDrinkAfterBuy = vendingMachine
+				.getDrinkInventory(selelctedDrink);
+
+		Assert.assertTrue("expected " + oneEuroCountExpectedAfterBuy
+				+ "   but got " + oneEuroCountAfterBuy,
+				oneEuroCountAfterBuy == oneEuroCountExpectedAfterBuy);
+
+		Assert.assertTrue("expected " + cent50CountExpectedAfterBuy
+				+ "   but got " + cent50CountAfterBuy,
+				cent50CountAfterBuy == cent50CountExpectedAfterBuy);
+
+		Assert.assertTrue("expected " + cokeDrinkCountExpectedAfterBuy
+				+ "   but got " + cokeDrinkAfterBuy,
+				cokeDrinkAfterBuy == cokeDrinkCountExpectedAfterBuy);
 	}
 
 	@Test(expected = DrinkUnavailableException.class)
@@ -106,11 +139,18 @@ public class VendingMachineServiceTest {
 
 		Drink newDrink = new Drink(201L);
 
-		int currentCount = vendingMachine.getDrinkInventory(newDrink);
-		vendingMachine.replenishDrinks(newDrink);
-		int newCount = vendingMachine.getDrinkInventory(newDrink);
+		int expectedCountAfterReplenishment = vendingMachine
+				.getDrinkInventory(newDrink) + 1;
 
-		Assert.assertTrue(newCount == currentCount + 1);
+		vendingMachine.replenishDrinks(newDrink);
+
+		int actualCountAfterReplenishment = vendingMachine
+				.getDrinkInventory(newDrink);
+
+		Assert.assertTrue(
+				"expected " + expectedCountAfterReplenishment + " but got "
+						+ actualCountAfterReplenishment,
+				actualCountAfterReplenishment == expectedCountAfterReplenishment);
 
 	}
 
@@ -119,11 +159,18 @@ public class VendingMachineServiceTest {
 
 		Coin newCoin = new Coin(PermissibleCoins.CENT50);
 
-		int currentCount = vendingMachine.getCoinInventory(newCoin);
-		vendingMachine.replenishChange(newCoin);
-		int newCount = vendingMachine.getCoinInventory(newCoin);
+		int expectedCountAfterReplenishment = vendingMachine
+				.getCoinInventory(newCoin) + 1;
 
-		Assert.assertTrue(newCount == currentCount + 1);
+		vendingMachine.replenishChange(newCoin);
+
+		int actualCountAfterReplenishment = vendingMachine
+				.getCoinInventory(newCoin);
+
+		Assert.assertTrue(
+				"expected " + expectedCountAfterReplenishment + " but got "
+						+ actualCountAfterReplenishment,
+				actualCountAfterReplenishment == expectedCountAfterReplenishment);
 
 	}
 
